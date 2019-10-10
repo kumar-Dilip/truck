@@ -1,0 +1,80 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<mule xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core"
+	xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns="http://www.mulesoft.org/schema/mule/core"
+	xmlns:apikit="http://www.mulesoft.org/schema/mule/mule-apikit"
+	xmlns:http="http://www.mulesoft.org/schema/mule/http" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd http://www.mulesoft.org/schema/mule/mule-apikit http://www.mulesoft.org/schema/mule/mule-apikit/current/mule-apikit.xsd 
+http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd">
+	<sub-flow name="createDispatch_subFlow" doc:id="1ed2314f-ae3e-456b-a882-d7139d7c1bcb">
+		<set-variable value="#[attributes.headers.'X-Company-Id']" doc:name="companyId" doc:id="52d68756-9fa3-4ba3-85f0-1e1100f1e50c" variableName="companyId" />
+		<ee:transform doc:name="Transform Message" doc:id="23f4311b-c1e5-423c-8284-43e684429361" >
+			<ee:message />
+			<ee:variables >
+				<ee:set-variable variableName="hmac_data" ><![CDATA[%dw 2.0
+output application/java
+---
+vars.httpMethod ++ '/v1/dispatches' ++ vars.companyId ++ correlationId]]></ee:set-variable>
+				<ee:set-variable variableName="hmac_client_secret" ><![CDATA[%dw 2.0
+output application/java
+---
+'${secure::api.secret}']]></ee:set-variable>
+				<ee:set-variable variableName="hmac_algorithm" ><![CDATA[%dw 2.0
+output application/java
+---
+"HmacSHA256"]]></ee:set-variable>
+				<ee:set-variable variableName="apiKey" ><![CDATA[%dw 2.0
+output application/java
+---
+'${secure::api.key}']]></ee:set-variable>
+			</ee:variables>
+		</ee:transform>
+		<set-variable value="#[correlationId]" doc:name="msgId" doc:id="fddcc8e7-6165-4390-89ea-1d5dae93af2e" variableName="msgId" />
+		<flow-ref doc:name="generateHMAC_Signature_subFlow" doc:id="5f87ff6a-5cc9-4fe7-9acd-a776ad350378" name="generateHMAC_Signature_subFlow" target="signature" targetValue="#[payload]" />
+		<http:request method="#[vars.httpMethod]" doc:name="Request" doc:id="272e1378-77dd-4b5c-a5f6-ffbaba69ed30" config-ref="HTTP_Request_configuration" path="v1/dispatches" >
+			<http:headers ><![CDATA[#[output application/java
+---
+{
+	"X-Signature" : vars.signature,
+	"X-Company-Id" : vars.companyId,
+	"X-Nonce" : vars.msgId,
+	"X-Api-Key" : vars.apiKey
+}]]]></http:headers>
+		</http:request>
+	</sub-flow>
+	<sub-flow name="getDispatches_sub_Flow" doc:id="ff4e6f68-6154-44b4-a395-5ae4b250cf01" >
+		<set-variable value="#[attributes.headers.'X-Company-Id']" doc:name="companyId" doc:id="3f0594c2-8e04-4c92-afd5-cc0651e5ca7c" variableName="companyId" />
+		<ee:transform doc:name="Transform Message" doc:id="b899234f-3ae6-42ac-9953-96bcaf970e4f" >
+			<ee:message />
+			<ee:variables >
+				<ee:set-variable variableName="hmac_data" ><![CDATA[%dw 2.0
+output application/java
+---
+'GET' ++ '/v1/dispatches' ++ vars.companyId ++ correlationId]]></ee:set-variable>
+				<ee:set-variable variableName="hmac_client_secret" ><![CDATA[%dw 2.0
+output application/java
+---
+'${secure::api.secret}']]></ee:set-variable>
+				<ee:set-variable variableName="hmac_algorithm" ><![CDATA[%dw 2.0
+output application/java
+---
+"HmacSHA256"]]></ee:set-variable>
+				<ee:set-variable variableName="apiKey" ><![CDATA[%dw 2.0
+output application/java
+---
+'${secure::api.key}']]></ee:set-variable>
+			</ee:variables>
+		</ee:transform>
+		<set-variable value="#[correlationId]" doc:name="msgId" doc:id="f97f29b0-f6b2-409b-8e9a-b59e86620996" variableName="msgId" />
+		<flow-ref doc:name="generateHMAC_Signature_subFlow" doc:id="14eda497-b9b3-4146-8d0a-f69793954932" name="generateHMAC_Signature_subFlow" target="signature" targetValue="#[payload]" />
+		<http:request method="GET" doc:name="Request" doc:id="fb2e54c5-abc9-450f-ac2c-4d127fc65729" config-ref="HTTP_Request_configuration" path="v1/dispatches" >
+			<http:headers ><![CDATA[#[output application/java
+---
+{
+	"X-Signature" : vars.signature,
+	"X-Company-Id" : vars.companyId,
+	"X-Nonce" : vars.msgId,
+	"X-Api-Key" : vars.apiKey
+}]]]></http:headers>
+		</http:request>
+	</sub-flow>
+</mule>
